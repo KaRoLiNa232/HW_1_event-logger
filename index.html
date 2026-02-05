@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Sentiment Logger</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; line-height: 1.5; color: #333; }
+        .section { border: 1px solid #e0e0e0; padding: 20px; border-radius: 12px; margin-bottom: 20px; background: #f9f9f9; }
+        h3 { margin-top: 0; color: #555; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #357ae8; }
+        #status { text-align: center; font-weight: bold; margin-top: 10px; min-height: 24px; }
+        .review-box { font-style: italic; background: #fff; padding: 10px; border-left: 4px solid #4285f4; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="section">
+        <h3>Настройки</h3>
+        <input type="text" id="gasUrl" placeholder="Вставьте ваш /exec URL">
+        <button onclick="saveSettings()">Сохранить настройки</button>
+    </div>
+
+    <div class="section">
+        <h3>Review Sentiment Analyzer</h3>
+        <div id="reviewDisplay" class="review-box">Нажмите кнопку, чтобы проанализировать отзыв</div>
+        <button onclick="sendData()">Анализировать и отправить в Sheets</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // При загрузке страницы достаем сохраненный URL
+        const gasInput = document.getElementById('gasUrl');
+        gasInput.value = localStorage.getItem('gasUrl') || '';
+
+        // Генерируем или достаем стабильный ID пользователя
+        let userId = localStorage.getItem('userId');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('userId', userId);
+        }
+
+        function saveSettings() {
+            localStorage.setItem('gasUrl', gasInput.value);
+            updateStatus('✅ Настройки сохранены');
+        }
+
+        function updateStatus(text) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = text;
+            setTimeout(() => statusDiv.innerText = '', 3000);
+        }
+
+        const reviews = [
+            "Отличный товар, быстрая доставка!",
+            "Ужасное качество, не рекомендую никому.",
+            "Нормально за свои деньги, но упаковка помята.",
+            "Всё супер, буду заказывать еще!",
+            "Сломалось через два дня использования."
+        ];
+
+        async function sendData() {
+            const url = gasInput.value;
+            if (!url) {
+                alert('Пожалуйста, вставьте URL вашего скрипта!');
+                return;
+            }
+
+            // Выбираем случайный отзыв
+            const randomReview = reviews[Math.floor(Math.random() * reviews.length)];
+            const sentiment = Math.random() > 0.5 ? "POSITIVE (99%)" : "NEGATIVE (82%)";
+            
+            // Собираем МЕТА данные (информация о клиенте)
+            const meta = JSON.stringify({
+                userId: userId,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language
+            });
+
+            document.getElementById('reviewDisplay').innerText = `"${randomReview}" \n— ${sentiment}`;
+
+            // Подготовка данных для "Simple Request" (x-www-form-urlencoded)
+            const formData = new URLSearchParams();
+            formData.append('review', randomReview);
+            formData.append('sentiment', sentiment);
+            formData.append('meta', meta);
+
+            try {
+                // Отправляем запрос
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors', // Важно для обхода CORS preflight
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+
+                updateStatus('🚀 Событие отправлено в Таблицу!');
+            } catch (error) {
+                console.error(error);
+                updateStatus('❌ Ошибка при отправке');
+            }
+        }
+    </script>
+</body>
+</html>

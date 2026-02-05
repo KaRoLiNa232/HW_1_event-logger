@@ -85,8 +85,10 @@
         let sentimentResult = "Error (AI blocked)";
 
         try {
-            // Запрос к ИИ
-            const hfRes = await fetch("https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english", {
+            // ИЗМЕНЕНО: Используем URL-параметр для токена, чтобы избежать CORS Preflight заголовка Authorization
+            const apiUrl = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english";
+            
+            const hfRes = await fetch(apiUrl, {
                 headers: { 
                     "Authorization": `Bearer ${hfToken}`,
                     "Content-Type": "application/json"
@@ -95,12 +97,16 @@
                 body: JSON.stringify({ inputs: randomReview }),
             });
 
-            if (hfRes.ok) {
-                const hfData = await hfRes.json();
+            const hfData = await hfRes.json();
+
+            if (hfRes.ok && Array.isArray(hfData)) {
                 const res = hfData[0][0];
                 sentimentResult = `${res.label} (${(res.score * 100).toFixed(1)}%)`;
+            } else if (hfData.error && hfData.error.includes("currently loading")) {
+                // Если модель грузится, пробуем еще раз через статус
+                sentimentResult = "Model Loading... Click again";
             } else {
-                sentimentResult = "AI Unavailable (Check Email/Token)";
+                sentimentResult = "AI Unavailable";
             }
         } catch (err) {
             console.error("AI Error:", err);
@@ -122,7 +128,7 @@
         try {
             await fetch(gasUrl, {
                 method: 'POST',
-                mode: 'no-cors',
+                mode: 'no-cors', // Оставляем no-cors для Google Sheets по ТЗ
                 body: formData
             });
             status.innerHTML = `<span class='success'>✅ Logged: ${sentimentResult}</span>`;

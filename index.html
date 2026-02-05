@@ -10,121 +10,119 @@
 
     <style>
         :root {
-            --bg-color: #f0f2f5;
+            --bg-color: #f8fafc;
+            --primary: #4f46e5;
             --card-bg: #ffffff;
-            --primary-blue: #3498db;
-            --text-main: #2c3e50;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            color: #1e293b;
         }
 
         .card {
             background: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             width: 100%;
             max-width: 500px;
         }
 
-        h2 { text-align: center; margin-bottom: 25px; color: #1a1a1a; }
+        h2 { text-align: center; margin-top: 0; font-size: 1.5rem; }
 
-        /* Элементы управления из кода преподавателя */
+        /* Поля статуса и ошибок (используются в app.js) */
         #status {
             display: block;
             text-align: center;
-            font-size: 0.9rem;
-            color: var(--primary-blue);
-            margin-bottom: 10px;
-            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--primary);
+            background: #eef2ff;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 1rem;
         }
 
         #error-message {
             display: none;
-            background: #ff7675;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 0.85rem;
-            text-align: center;
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            border: 1px solid #fee2e2;
         }
 
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #636e72; }
-        
+        /* Поле ввода токена (для совместимости с UI препода) */
+        .token-section { margin-bottom: 1.5rem; }
+        .token-section label { display: block; font-size: 0.75rem; margin-bottom: 4px; color: #64748b; }
         #api-token {
             width: 100%;
             padding: 10px;
-            border: 1px solid #dfe6e9;
+            border: 1px solid #e2e8f0;
             border-radius: 6px;
             box-sizing: border-box;
         }
 
-        /* Область отображения отзыва */
-        .review-display {
-            background: #f8f9fa;
-            border-left: 5px solid var(--primary-blue);
-            padding: 20px;
-            margin: 20px 0;
+        /* Область вывода отзыва */
+        .review-box {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
             min-height: 60px;
-            border-radius: 4px;
             font-style: italic;
-            color: #444;
+            border-left: 4px solid var(--primary);
         }
 
         /* Кнопка */
         #analyze-btn {
             width: 100%;
-            padding: 14px;
-            background-color: var(--primary-blue);
+            padding: 12px;
+            background-color: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: opacity 0.2s;
         }
 
-        #analyze-btn:hover { background-color: #2980b9; }
-        #analyze-btn:disabled { background-color: #b2bec3; cursor: not-allowed; }
+        #analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* Индикатор загрузки */
         .loading {
             display: none;
             text-align: center;
-            margin: 15px 0;
-            color: var(--primary-blue);
-            font-weight: bold;
+            margin: 1rem 0;
+            color: var(--primary);
+            font-size: 0.875rem;
         }
 
-        /* Результаты анализа (классы из displaySentiment) */
+        /* Контейнер результата (стилизуется классами positive/negative/neutral из JS) */
         .sentiment-result {
+            margin-top: 1.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            margin-top: 20px;
-            padding: 15px;
+            gap: 10px;
+            padding: 1rem;
             border-radius: 8px;
-            font-weight: 700;
-            transition: all 0.3s;
+            font-weight: bold;
         }
 
-        .sentiment-result.positive { background-color: #dff9fb; color: #0984e3; border: 1px solid #74b9ff; }
-        .sentiment-result.negative { background-color: #fff1f0; color: #d63031; border: 1px solid #ff7675; }
-        .sentiment-result.neutral { background-color: #f5f6fa; color: #7f8c8d; border: 1px solid #dcdde1; }
-
-        .icon { font-size: 1.8rem; }
+        .sentiment-result.positive { background: #dcfce7; color: #166534; }
+        .sentiment-result.negative { background: #fee2e2; color: #991b1b; }
+        .sentiment-result.neutral { background: #f1f5f9; color: #475569; }
+        
+        .icon { font-size: 1.5rem; }
     </style>
 </head>
 <body>
@@ -132,21 +130,21 @@
 <div class="card">
     <h2>Review Analyzer</h2>
     
-    <span id="status">Initializing...</span>
+    <div id="status">Initializing...</div>
     
     <div id="error-message"></div>
 
-    <div class="input-group">
-        <label for="api-token">Hugging Face Token (optional for local):</label>
-        <input type="password" id="api-token" placeholder="hf_...">
+    <div class="token-section">
+        <label for="api-token">Hugging Face Token (UI Compatibility):</label>
+        <input type="password" id="api-token" placeholder="Optional for local inference">
     </div>
 
-    <div class="review-display">
-        <div id="review-text">The review text will be displayed here.</div>
+    <div class="review-box">
+        <div id="review-text">Waiting for model to load...</div>
     </div>
 
     <div class="loading">
-        <i class="fas fa-cog fa-spin"></i> Analyzing with Local AI...
+        <i class="fas fa-spinner fa-spin"></i> Analyzing...
     </div>
 
     <button id="analyze-btn">Analyze Random Review</button>

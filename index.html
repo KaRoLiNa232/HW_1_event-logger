@@ -4,64 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentiment Event Logger MVP</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         :root {
-            --primary: #4f46e5;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --neutral: #64748b;
-            --bg: #f8fafc;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary-blue: #3498db;
+            --text-main: #2c3e50;
         }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; color: #1e293b; }
-        .container { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
-        h1 { margin-top: 0; font-size: 1.5rem; text-align: center; color: #0f172a; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 { text-align: center; margin-bottom: 25px; color: #1a1a1a; }
+
+        /* Элементы управления из кода преподавателя */
+        #status {
+            display: block;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        #error-message {
+            display: none;
+            background: #ff7675;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #636e72; }
         
-        /* Status & Error Areas */
-        #status-area { font-size: 0.875rem; text-align: center; margin-bottom: 1rem; padding: 0.5rem; border-radius: 0.5rem; background: #eff6ff; color: var(--primary); }
-        #error-area { display: none; font-size: 0.875rem; color: white; background: var(--danger); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: center; }
+        #api-token {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dfe6e9;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
 
-        /* Review Display */
-        .review-box { border: 1px solid #e2e8f0; padding: 1rem; border-radius: 0.5rem; min-height: 80px; margin-bottom: 1.5rem; background: #fff; font-style: italic; position: relative; }
-        .review-box::before { content: '"'; font-size: 2rem; color: #cbd5e1; position: absolute; top: -5px; left: 5px; }
+        /* Область отображения отзыва */
+        .review-display {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary-blue);
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 60px;
+            border-radius: 4px;
+            font-style: italic;
+            color: #444;
+        }
 
-        /* Result UI */
-        .result-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem; padding: 1rem; border-radius: 0.5rem; transition: all 0.3s ease; }
-        .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
-        .result-text { font-weight: 700; font-size: 1.125rem; }
+        /* Кнопка */
+        #analyze-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
 
-        /* Button */
-        button { width: 100%; padding: 0.75rem; border: none; border-radius: 0.5rem; background: var(--primary); color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        button:hover { opacity: 0.9; }
-        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #analyze-btn:hover { background-color: #2980b9; }
+        #analyze-btn:disabled { background-color: #b2bec3; cursor: not-allowed; }
 
-        /* Sentiment Themes */
-        .theme-positive { background-color: #f0fdf4; color: var(--success); }
-        .theme-negative { background-color: #fef2f2; color: var(--danger); }
-        .theme-neutral { background-color: #f1f5f9; color: var(--neutral); }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+            color: var(--primary-blue);
+            font-weight: bold;
+        }
+
+        /* Результаты анализа (классы из displaySentiment) */
+        .sentiment-result {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .sentiment-result.positive { background-color: #dff9fb; color: #0984e3; border: 1px solid #74b9ff; }
+        .sentiment-result.negative { background-color: #fff1f0; color: #d63031; border: 1px solid #ff7675; }
+        .sentiment-result.neutral { background-color: #f5f6fa; color: #7f8c8d; border: 1px solid #dcdde1; }
+
+        .icon { font-size: 1.8rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Review Sentiment Analyzer</h1>
+<div class="card">
+    <h2>Review Analyzer</h2>
     
-    <div id="status-area">Initializing application...</div>
-    <div id="error-area"></div>
+    <span id="status">Initializing...</span>
+    
+    <div id="error-message"></div>
 
-    <div class="review-box" id="review-display">
-        Selected review text will appear here.
+    <div class="input-group">
+        <label for="api-token">Hugging Face Token (optional for local):</label>
+        <input type="password" id="api-token" placeholder="hf_...">
     </div>
 
-    <div id="result-area" class="result-container" style="display: none;">
-        <i id="sentiment-icon" class="fa-solid result-icon"></i>
-        <div id="sentiment-label" class="result-text"></div>
+    <div class="review-display">
+        <div id="review-text">The review text will be displayed here.</div>
     </div>
 
-    <button id="analyze-btn" disabled>Analyze random review</button>
+    <div class="loading">
+        <i class="fas fa-cog fa-spin"></i> Analyzing with Local AI...
+    </div>
+
+    <button id="analyze-btn">Analyze Random Review</button>
+
+    <div id="sentiment-result" class="sentiment-result"></div>
 </div>
 
 <script type="module" src="app.js"></script>
+
 </body>
 </html>

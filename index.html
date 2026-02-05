@@ -2,109 +2,124 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review Sentiment Logger</title>
+    <title>AI Event Logger - Final</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: -apple-system, sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; line-height: 1.5; color: #333; }
-        .section { border: 1px solid #e0e0e0; padding: 20px; border-radius: 12px; margin-bottom: 20px; background: #f9f9f9; }
-        h3 { margin-top: 0; color: #555; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #357ae8; }
-        #status { text-align: center; font-weight: bold; margin-top: 10px; min-height: 24px; }
-        .review-box { font-style: italic; background: #fff; padding: 10px; border-left: 4px solid #4285f4; margin: 10px 0; }
+        body { background: #f0f2f5; font-family: sans-serif; display: flex; justify-content: center; padding: 40px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; margin-top: 10px; }
+        #reviewDisplay { font-style: italic; color: #555; margin: 15px 0; min-height: 40px; }
+        .status { text-align: center; font-size: 14px; margin-top: 15px; color: #666; }
+        .POSITIVE { color: #28a745; font-weight: bold; }
+        .NEGATIVE { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="section">
-        <h3>Настройки</h3>
-        <input type="text" id="gasUrl" placeholder="Вставьте ваш /exec URL">
-        <button onclick="saveSettings()">Сохранить настройки</button>
+<div class="container">
+    <h3>MVP Event Logger</h3>
+    
+    <div class="box">
+        <label>Settings</label>
+        <input type="text" id="gasUrl" placeholder="Google Script URL (/exec)">
+        <input type="password" id="hfToken" placeholder="Hugging Face Token (hf_...)">
+        <button class="btn-blue" onclick="saveSettings()">Save to LocalStorage</button>
     </div>
 
-    <div class="section">
-        <h3>Review Sentiment Analyzer</h3>
-        <div id="reviewDisplay" class="review-box">Нажмите кнопку, чтобы проанализировать отзыв</div>
-        <button onclick="sendData()">Анализировать и отправить в Sheets</button>
-        <div id="status"></div>
+    <div class="box">
+        <div id="reviewDisplay">Review will appear here...</div>
+        <button class="btn-green" id="runBtn" onclick="analyzeAndLog()">Analyze Random Review</button>
     </div>
 
-    <script>
-        // При загрузке страницы достаем сохраненный URL
-        const gasInput = document.getElementById('gasUrl');
-        gasInput.value = localStorage.getItem('gasUrl') || '';
+    <div id="status" class="status"></div>
+</div>
 
-        // Генерируем или достаем стабильный ID пользователя
-        let userId = localStorage.getItem('userId');
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('userId', userId);
+<script>
+    // Массив отзывов (Randomly selected по ТЗ)
+    const reviews = [
+        "The interface is very intuitive and easy to use!",
+        "Awful experience. The app crashes every time I open it.",
+        "Average product. It works, but the design is outdated.",
+        "Love this! Saved me so much time. Highly recommended.",
+        "Total waste of time. Doesn't do what it promises."
+    ];
+
+    // Пункт ТЗ: Загрузка из localStorage
+    window.onload = () => {
+        document.getElementById('gasUrl').value = localStorage.getItem('gasUrl') || '';
+        document.getElementById('hfToken').value = localStorage.getItem('hfToken') || '';
+        
+        // Пункт ТЗ: Генерация стабильного User ID
+        if (!localStorage.getItem('myUserId')) {
+            localStorage.setItem('myUserId', 'user_' + Math.random().toString(36).substr(2, 9));
         }
+    };
 
-        function saveSettings() {
-            localStorage.setItem('gasUrl', gasInput.value);
-            updateStatus('✅ Настройки сохранены');
-        }
+    function saveSettings() {
+        localStorage.setItem('gasUrl', document.getElementById('gasUrl').value);
+        localStorage.setItem('hfToken', document.getElementById('hfToken').value);
+        showStatus("✅ Settings saved!");
+    }
 
-        function updateStatus(text) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerText = text;
-            setTimeout(() => statusDiv.innerText = '', 3000);
-        }
+    function showStatus(text) {
+        document.getElementById('status').innerText = text;
+    }
 
-        const reviews = [
-            "Отличный товар, быстрая доставка!",
-            "Ужасное качество, не рекомендую никому.",
-            "Нормально за свои деньги, но упаковка помята.",
-            "Всё супер, буду заказывать еще!",
-            "Сломалось через два дня использования."
-        ];
+    async function analyzeAndLog() {
+        const gasUrl = document.getElementById('gasUrl').value;
+        const hfToken = document.getElementById('hfToken').value;
+        const btn = document.getElementById('runBtn');
 
-        async function sendData() {
-            const url = gasInput.value;
-            if (!url) {
-                alert('Пожалуйста, вставьте URL вашего скрипта!');
-                return;
-            }
+        if (!gasUrl || !hfToken) return alert("Fill in the settings first!");
 
-            // Выбираем случайный отзыв
-            const randomReview = reviews[Math.floor(Math.random() * reviews.length)];
-            const sentiment = Math.random() > 0.5 ? "POSITIVE (99%)" : "NEGATIVE (82%)";
-            
-            // Собираем МЕТА данные (информация о клиенте)
-            const meta = JSON.stringify({
-                userId: userId,
-                userAgent: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language
+        btn.disabled = true;
+        showStatus("🤖 AI is thinking...");
+
+        // 1. Выбор случайного отзыва
+        const randomReview = reviews[Math.floor(Math.random() * reviews.length)];
+        document.getElementById('reviewDisplay').innerText = `"${randomReview}"`;
+
+        try {
+            // 2. Реальный анализ через Hugging Face (как в демо)
+            const hfRes = await fetch("https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english", {
+                headers: { Authorization: `Bearer ${hfToken}` },
+                method: "POST",
+                body: JSON.stringify({ inputs: randomReview }),
+            });
+            const hfData = await hfRes.json();
+            const res = hfData[0][0];
+            const sentimentStr = `${res.label} (${(res.score * 100).toFixed(1)}%)`;
+
+            // 3. Отправка в Google Sheets (Simple Request)
+            // Пункт ТЗ: x-www-form-urlencoded и никаких кастомных заголовков для обхода CORS
+            const formData = new URLSearchParams();
+            formData.append('ts_iso', new Date().toISOString()); // Колонка 1
+            formData.append('review', randomReview);            // Колонка 2
+            formData.append('sentiment', sentimentStr);        // Колонка 3
+            formData.append('meta', JSON.stringify({           // Колонка 4
+                userId: localStorage.getItem('myUserId'),
+                ua: navigator.userAgent,
+                lang: navigator.language
+            }));
+
+            await fetch(gasUrl, {
+                method: 'POST',
+                mode: 'no-cors', // Важно для ТЗ!
+                body: formData
             });
 
-            document.getElementById('reviewDisplay').innerText = `"${randomReview}" \n— ${sentiment}`;
-
-            // Подготовка данных для "Simple Request" (x-www-form-urlencoded)
-            const formData = new URLSearchParams();
-            formData.append('review', randomReview);
-            formData.append('sentiment', sentiment);
-            formData.append('meta', meta);
-
-            try {
-                // Отправляем запрос
-                await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors', // Важно для обхода CORS preflight
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                });
-
-                updateStatus('🚀 Событие отправлено в Таблицу!');
-            } catch (error) {
-                console.error(error);
-                updateStatus('❌ Ошибка при отправке');
-            }
+            showStatus(`✅ Logged: ${sentimentStr}`);
+        } catch (err) {
+            showStatus("❌ Error! Check token or console.");
+            console.error(err);
+        } finally {
+            btn.disabled = false;
         }
-    </script>
+    }
+</script>
 </body>
 </html>

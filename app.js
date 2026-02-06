@@ -2,7 +2,7 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js";
 
 // Конфигурация
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz2Nx1zZxG0mNoaf66tfZq6yE5pjR_zs_rPPwDqyXnnz4waqI-wK1Ri-qwvM9iVbdrt/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwd7yhCSjB7VqjwX7S9oC0iNRtrNYxd4K5sybZducV8FZFsYEUb5YPXQaX5-y5JEbI/exec";
 
 // Global variables
 let reviews = [];

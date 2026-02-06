@@ -94,7 +94,7 @@ async function analyzeRandomReview() {
 // Функция отправки данных в Google Sheets (Simple Request)
 async function sendLogToGAS(text, label, score) {
     const payload = {
-        ts_iso: new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }),,
+        ts_iso: new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }),
         review: text,
         sentiment: `${label} (${(score * 100).toFixed(0)}%)`,
         meta: JSON.stringify({
